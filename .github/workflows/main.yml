@@ -1,18 +1,16 @@
-name: CHD_Grade_Monitor
+name: CHD_GPA_MONITOR
 
 on:
   schedule:
-    - cron: '*/20 * * * *' # 每20分钟运行一次，可根据需要修改
-  workflow_dispatch:      # 允许你在 GitHub 页面上手动点击运行
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
 
 jobs:
-  build:
+  monitor_job:
     runs-on: ubuntu-latest
-    
-    # 必须赋予写入权限，否则无法保存 last_hash.txt 和 cookie_status.txt
     permissions:
       contents: write
-      
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -22,22 +20,24 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install Dependencies
+      - name: Install Runtime Env
         run: |
-          pip install requests beautifulsoup4
+          pip install playwright beautifulsoup4 requests
+          playwright install chromium
 
-      - name: Run Grade Monitor
+      - name: Run GPA Script
         env:
+          USERNAME: ${{ secrets.USERNAME }}
+          PASSWORD: ${{ secrets.PASSWORD }}
           SC_KEY: ${{ secrets.SC_KEY }}
-          COOKIE: ${{ secrets.COOKIE }}
           TARGET_URL: ${{ secrets.TARGET_URL }}
+          LOGIN_URL: ${{ secrets.LOGIN_URL }}
         run: python main.py
 
-      - name: Sync Status to Repo
+      - name: Sync Hash State
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          # 即使文件不存在或没变化也不报错
-          git add last_hash.txt cookie_status.txt || true
-          git commit -m "chore: update grade snapshot and status [skip ci]" || exit 0
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add last_hash.txt
+          git commit -m "Update last_hash [skip ci]" || exit 0
           git push
