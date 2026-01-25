@@ -1,0 +1,42 @@
+name: CHD_GPA_Push
+
+on:
+  schedule:
+    - cron: '*/20 * * * *' # 每20分钟运行一次
+  workflow_dispatch:      # 允许手动触发运行按钮
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    # 【核心】必须开启仓库写入权限，否则会报错失败
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run Grade Monitor
+        env:
+          SC_KEY: ${{ secrets.SC_KEY }}
+          COOKIE: ${{ secrets.COOKIE }}
+        run: python main.py
+
+      - name: Sync Status to Repo
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          # 即使文件不存在或没变化也不报错，继续执行
+          git add last_hash.txt cookie_status.txt || true
+          git commit -m "chore: update grade snapshot [skip ci]" || exit 0
+          git push
