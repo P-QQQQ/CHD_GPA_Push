@@ -165,7 +165,7 @@ def check_and_push():
 
             # 判断标题
             if last_hash == "":
-                title = "🚀 CHD 监控：服务已激活"
+                title = "🚀 CHD GPA推送：服务已激活"
                 desc_start = "### ✅ 初始化成功\n系统已建立基准快照。\n\n"
             else:
                 title = "🎉 长安大学：出新成绩了！"
@@ -175,8 +175,8 @@ def check_and_push():
             content = (
                 f"{desc_start}"
                 f"### 📈 GPA 统计\n"
-                f"- **核心绩点 (去水课): {gpa_filtered}**\n"
-                f"- 全口径 GPA: {gpa_all}\n\n"
+                f"- **核心绩点 (去三选二): {gpa_filtered}**\n"
+                f"- 总GPA: {gpa_all}\n\n"
                 f"### 📋 完整成绩单\n{table_header}{table_rows}"
             )
 
