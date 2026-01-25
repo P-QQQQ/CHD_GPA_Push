@@ -95,37 +95,33 @@ def check_and_push():
         if new_hash != last_hash:
             with open(HASH_FILE, 'w') as f: f.write(new_hash)
             
-            # --- Markdown 格式构建 ---
-            title = "🎉 长安大学：出新成绩了！"
-            
-            # 统计部分（使用引用块和加粗）
-            content = "### 📊 GPA 统计报告\n"
-            content += f"> **核心绩点 (剔除指定类): {gpa_filtered}**\n"
-            content += f"> 全部科目平均绩点: {gpa_all}\n\n"
-            
-            # 表格部分
-            content += "### 📚 详细成绩单\n"
-            content += "| 课程名称 | 绩点 | 学分 | 课程类别 |\n"
-            content += "| :--- | :--- | :--- | :--- |\n"
+            # 构建 Markdown 内容
+            table_header = "| 课程名称 | 绩点 | 学分 | 课程类别 |\n| :--- | :--- | :--- | :--- |\n"
+            table_rows = ""
             for d in extracted_data:
-                # 给高绩点（比如>=4.0）加个高亮或粗体，方便一眼看到好成绩
                 p_val = d[3]
                 try:
                     p_display = f"**{p_val}**" if float(p_val) >= 4.0 else p_val
                 except:
                     p_display = p_val
-                
-                content += f"| {d[0]} | {p_display} | {d[2]} | {d[1]} |\n"
+                table_rows += f"| {d[0]} | {p_display} | {d[2]} | {d[1]} |\n"
             
-            content += "\n---\n*监控运行中，下次出分将自动提醒。*"
-            
-            if last_hash != "":
-                send_wechat(title, content)
-                print("检测到更新，Markdown 表格已发送。")
+            # 判断是【首次激活】还是【成绩更新】
+            if last_hash == "":
+                title = "🚀 CHD 监控：服务已成功激活！"
+                content = f"### ✅ 监控启动成功\n> 系统已建立初始成绩快照，当前共有 **{len(extracted_data)}** 门课程。\n\n"
+                content += f"### 📊 当前 GPA 统计\n- **核心绩点 (剔除类): {gpa_filtered}**\n- 全部科目 GPA: {gpa_all}\n\n"
+                content += f"### 📚 初始成绩单快照\n{table_header}{table_rows}"
+                content += "\n---\n*以后若有新成绩出炉，系统将自动推送变动。*"
             else:
-                print("首次运行，快照已建立。")
+                title = "🎉 长安大学：出新成绩了！"
+                content = f"### 📊 GPA 统计更新\n- **核心绩点 (剔除类): {gpa_filtered}**\n- 全部科目 GPA: {gpa_all}\n\n"
+                content += f"### 📚 最新成绩单\n{table_header}{table_rows}"
+
+            send_wechat(title, content)
+            print("推送已发送。")
         else:
-            print(f"监控中... 当前 GPA: {gpa_filtered}")
+            print(f"监控中... 无变动。当前 GPA: {gpa_filtered}")
 
     except Exception as e:
         print(f"运行出错: {e}")
