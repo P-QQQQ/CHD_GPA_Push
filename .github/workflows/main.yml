@@ -3,7 +3,7 @@ name: CHD_Grade_Monitor
 on:
   schedule:
     - cron: '*/20 * * * *' # 每20分钟运行一次，可根据需要修改
-  workflow_dispatch:      # 允许你在 GitHub 页面上手动点击运行
+      # 允许你在 GitHub 页面上手动点击运行
 
 jobs:
   build:
