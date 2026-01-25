@@ -5,7 +5,8 @@ from bs4 import BeautifulSoup
 
 # --- 从 GitHub Secrets 读取配置 ---
 SC_KEY = os.environ.get('SC_KEY')
-COOKIE = os.environ.get('COOKIE')
+raw_cookie = os.environ.get('COOKIE') or ""
+COOKIE = raw_cookie.replace('\n', '').replace('\r', '').strip()
 TARGET_URL = os.environ.get('TARGET_URL')
 
 HASH_FILE = 'last_hash.txt'
