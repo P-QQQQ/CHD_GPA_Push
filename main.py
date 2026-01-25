@@ -44,15 +44,14 @@ def calculate_gpa(grade_list):
     gpa_filtered = total_points_filtered / total_credits_filtered if total_credits_filtered > 0 else 0
     return round(gpa_all, 3), round(gpa_filtered, 3)
 
-
+def check_and_push():
     if not os.path.exists(HASH_FILE):
         with open(HASH_FILE, 'w', encoding='utf-8') as f: f.write("")
     if not os.path.exists(STATUS_FILE):
         with open(STATUS_FILE, 'w', encoding='utf-8') as f: f.write("valid")
-    last_status = "valid"
-    if os.path.exists(STATUS_FILE):
-        with open(STATUS_FILE, 'r') as f:
-            last_status = f.read().strip()
+   
+    with open(STATUS_FILE, 'r') as f:
+         last_status = f.read().strip()
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
@@ -93,8 +92,8 @@ def calculate_gpa(grade_list):
         new_hash = hashlib.md5(current_content.encode('utf-8')).hexdigest()
 
         last_hash = ""
-        if os.path.exists(HASH_FILE):
-            with open(HASH_FILE, 'r') as f: last_hash = f.read().strip()
+        
+        with open(HASH_FILE, 'r') as f: last_hash = f.read().strip()
 
         if new_hash != last_hash:
             with open(HASH_FILE, 'w') as f: f.write(new_hash)
@@ -112,7 +111,7 @@ def calculate_gpa(grade_list):
             
             # 判断是【首次激活】还是【成绩更新】
             if last_hash == "":
-                title = "🚀 CHD GPA监控：服务已成功激活！"
+                title = "🚀 CHD GPA更新：服务已成功激活！"
                 content = f"### ✅ 监控启动成功\n> 系统已建立初始成绩快照，当前共有 **{len(extracted_data)}** 门课程。\n\n"
                 content += f"### 📊 当前 GPA 统计\n- **核心绩点 (剔除类): {gpa_filtered}**\n- 全部科目 GPA: {gpa_all}\n\n"
                 content += f"### 📚 初始成绩单快照\n{table_header}{table_rows}"
@@ -130,75 +129,5 @@ def calculate_gpa(grade_list):
     except Exception as e:
         print(f"运行出错: {e}")
 
-def check_and_push():
-    # --- 1. 初始化文件路径 ---
-    HASH_FILE = 'last_hash.txt'
-    STATUS_FILE = 'cookie_status.txt'
-    
-    # --- 2. 核心：强制保底，防止 Git 报错 ---
-    # 只要脚本开始运行，就先确保这两个文件存在，否则 Git Add 会崩溃
-    if not os.path.exists(HASH_FILE):
-        with open(HASH_FILE, 'w', encoding='utf-8') as f: f.write("")
-    if not os.path.exists(STATUS_FILE):
-        with open(STATUS_FILE, 'w', encoding='utf-8') as f: f.write("valid")
-
-    # 读取旧的记忆（成绩哈希和 Cookie 状态）
-    with open(HASH_FILE, 'r', encoding='utf-8') as f:
-        last_hash = f.read().strip()
-    with open(STATUS_FILE, 'r', encoding='utf-8') as f:
-        last_status = f.read().strip()
-
-    # --- 3. 获取数据 ---
-    # 这里调用你写的抓取函数，假设失败返回 None，成功返回列表
-    extracted_data = get_grades() 
-
-    # --- 情况 A：抓取失败 (可能是 Cookie 挂了) ---
-    if extracted_data is None:
-        # 只有在“之前是好的，现在变坏了”的情况下，才发一次通知
-        if last_status == "valid":
-            title = "⚠️ 监控告警：Cookie 已失效"
-            content = "教务系统连接失败，可能是 Cookie 过期了，请更新 GitHub Secrets 中的 COOKIE 变量。"
-            send_wechat(title, content)
-            
-            # 更新状态为失效，防止下次运行再次报警（拒绝轰炸）
-            with open(STATUS_FILE, 'w', encoding='utf-8') as f: f.write("expired")
-            print("Cookie 已失效，报警已发送。")
-        else:
-            print("Cookie 仍处于失效状态，已跳过重复报警。")
-        return # 直接结束，不执行后续逻辑
-
-    # --- 情况 B：抓取成功 ---
-    # 既然成功了，就把状态文件重置为 valid
-    with open(STATUS_FILE, 'w', encoding='utf-8') as f: f.write("valid")
-    
-    # 生成新数据的指纹和 GPA
-    new_hash = generate_hash(extracted_data)
-    gpa_all, gpa_filtered = calculate_gpa(extracted_data)
-
-    # --- 4. 比对数据是否有变化 ---
-    if new_hash != last_hash:
-        # 更新本地哈希文件
-        with open(HASH_FILE, 'w', encoding='utf-8') as f: f.write(new_hash)
-        
-        # 准备 Markdown 成绩单表格
-        table_header = "| 课程名称 | 绩点 | 学分 |\n| :--- | :--- | :--- |\n"
-        table_rows = ""
-        for d in extracted_data:
-            table_rows += f"| {d[0]} | {d[3]} | {d[2]} |\n"
-        
-        # --- 5. 【功能增强】判断是首次激活还是成绩更新 ---
-        if last_hash == "":
-            # 激活通知
-            title = "🚀 CHD GPA监控：服务已成功激活！"
-            content = f"### ✅ 监控启动成功\n系统已建立初始成绩快照。\n\n**当前核心 GPA: {gpa_filtered}**\n\n### 📚 初始成绩单\n{table_header}{table_rows}"
-        else:
-            # 成绩更新通知
-            title = "🎉 长安大学：出新成绩了！"
-            content = f"### 📊 GPA 更新提示\n最新核心 GPA: **{gpa_filtered}** (全部科目: {gpa_all})\n\n### 📚 最新成绩单\n{table_header}{table_rows}"
-
-        send_wechat(title, content)
-        print("推送成功：数据有变动/首次激活。")
-    else:
-        print(f"监控中... 成绩无变动。当前 GPA: {gpa_filtered}")
 if __name__ == "__main__":
     check_and_push()
