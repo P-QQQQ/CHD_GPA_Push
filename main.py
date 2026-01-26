@@ -1,5 +1,6 @@
 import os
 import requests
+import hashlib
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
@@ -10,8 +11,8 @@ SC_KEY = os.environ.get('SC_KEY')
 TARGET_URL = os.environ.get('TARGET_URL')
 LOGIN_URL = os.environ.get('LOGIN_URL', "https://ids.chd.edu.cn/authserver/login?service=http%3A%2F%2Fbkjw.chd.edu.cn%2Feams%2Fhome.action")
 
-# 改用 known_courses.txt 存储已出的课程名
-DATA_FILE = 'known_courses.txt'
+# 改名为 course_hashes.txt，存储课程名的MD5值，保护隐私
+DATA_FILE = 'course_hashes.txt'
 # 需要剔除计算 GPA 的课程类别
 EXCLUDE_CATEGORIES = ["社会科学与公共责任", "科学探索与技术创新", "经典阅读与写作沟通"]
 
@@ -86,6 +87,10 @@ def get_html_via_playwright():
         finally:
             browser.close()
 
+def get_md5(text):
+    """计算字符串的 MD5"""
+    return hashlib.md5(text.encode('utf-8')).hexdigest()
+
 def check_and_push():
     try:
         # 1. 获取源码
@@ -118,42 +123,47 @@ def check_and_push():
 
         # --- 核心修改逻辑开始 ---
 
-        # 3. 读取本地已知的课程列表
-        known_courses = set()
-        if not os.path.exists(DATA_FILE):
-            with open(DATA_FILE, 'w', encoding='utf-8') as f:
-                pass
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+        # 3. 读取本地已知的课程 Hash 集合
+        known_hashes = set()
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 for line in f:
                     if line.strip():
-                        known_courses.add(line.strip())        
+                        known_hashes.add(line.strip())
 
-        # 4. 构建当前课程字典 (方便查找数据)
-        current_courses_dict = {item[0]: item for item in extracted_data}
-        current_courses_set = set(current_courses_dict.keys())
+        # 4. 遍历当前抓取的数据，计算 Hash 并找出新课程
+        new_courses_items = []     # 存新课的完整信息 (name, cat, credit, point)
+        current_hashes = set()     # 存当前所有课的 Hash，用于覆写文件
 
-        # 5. 计算差集：找出 "新出现的课程"
-        new_courses_names = current_courses_set - known_courses
+        for item in extracted_data:
+            name = item[0]
+            name_hash = get_md5(name)
+            current_hashes.add(name_hash)
 
-        # 6. 计算 GPA (无论是否有更新都算一下，用于展示)
+            if name_hash not in known_hashes:
+                new_courses_items.append(item)
+
+        # 5. 计算 GPA (无论是否有更新都算一下)
         gpa_all, gpa_filtered = calculate_gpa(extracted_data)
 
-        # 7. 判断推送逻辑
-        if new_courses_names:
-            print(f"🔔 发现 {len(new_courses_names)} 门新成绩！")
+        # 6. 判断推送逻辑
+        if new_courses_items:
+            print(f"🔔 发现 {len(new_courses_items)} 门新成绩！")
             
-            # 更新本地文件
+            # 更新本地文件 (只存 Hash)
             with open(DATA_FILE, 'w', encoding='utf-8') as f:
-                for name in current_courses_set:
-                    f.write(f"{name}\n")
+                for h in current_hashes:
+                    f.write(f"{h}\n")
 
             # --- 构建推送消息 ---
             
             # A. 新成绩详情板块
             new_grades_msg = "### 🆕 本次更新\n"
-            for name in new_courses_names:
-                # 获取该课程的完整信息
-                _, cat, cred, pt = current_courses_dict[name]
+            new_names_set = set() # 用于在完整表格里做标记
+            
+            for item in new_courses_items:
+                name, _, cred, pt = item
+                new_names_set.add(name)
                 # 绩点加粗逻辑
                 pt_display = f"**{pt}**" if float(pt) >= 4.0 else pt
                 new_grades_msg += f"- {name}: 绩点 {pt_display} (学分 {cred})\n"
@@ -162,20 +172,21 @@ def check_and_push():
             table_header = "\n### 📋 完整成绩单\n| 课程 | 类别 | 绩点 | 学分 |\n| :--- | :--- | :--- | :--- |\n"
             table_rows = ""
             for d in extracted_data:
-                # 给新出的成绩行加个标记，或者保持原样
-                is_new = "🆕 " if d[0] in new_courses_names else ""
+                # 标记新课程
+                is_new = "🆕 " if d[0] in new_names_set else ""
                 try:
                     p_display = f"**{d[3]}**" if float(d[3]) >= 4.0 else d[3]
                 except:
                     p_display = d[3]
                 table_rows += f"| {is_new}{d[0]} | {d[1]} | {p_display} | {d[2]} |\n"
 
-            # C. 标题判断 (如果是第一次运行，或者没有旧数据)
-            if len(known_courses) == 0:
+            # C. 标题判断 (如果是第一次运行)
+            if len(known_hashes) == 0:
                 title = "🚀 CHD GPA推送：服务初始化"
-                desc_start = "### ✅ 初始化完成\n已建立基准课程列表。\n\n"
+                desc_start = "### ✅ 初始化完成\n已建立课程指纹库（Hash），隐私已保护。\n\n"
             else:
-                title = f"🎉 出分啦：{list(new_courses_names)[0]} 等"
+                first_new_name = new_courses_items[0][0]
+                title = f"🎉 出分啦：{first_new_name} 等"
                 desc_start = ""
 
             # D. 组合最终消息
