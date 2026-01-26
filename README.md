@@ -35,8 +35,7 @@
 ### 3. 启用 Workflow
 1.  点击仓库上方的 **Actions** 标签。
 2.  如果不显示绿色按钮，点击左侧的 `CHD_GPA_MONITOR`。
-3.  点击 **Enable workflow**。
-4.  你可以手动点击 **Run workflow** 进行第一次测试（初始化）。
+3.  你可以手动点击 **Run workflow** 进行第一次测试（初始化）。
 
 ---
 
