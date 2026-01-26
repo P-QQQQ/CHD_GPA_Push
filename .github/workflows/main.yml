@@ -2,8 +2,7 @@ name: CHD_GPA_MONITOR
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+    - cron: '*/7 * * * *'
 
 jobs:
   monitor_job:
