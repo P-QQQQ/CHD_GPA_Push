@@ -2,7 +2,8 @@ name: CHD_GPA_MONITOR
 
 on:
   schedule:
-    - cron: '*/7 * * * *'
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
 
 jobs:
   monitor_job:
@@ -33,10 +34,17 @@ jobs:
           LOGIN_URL: ${{ secrets.LOGIN_URL }}
         run: python main.py
 
-      - name: Sync Hash State
+      - name: Sync Course State
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add last_hash.txt
-          git commit -m "Update last_hash [skip ci]" || exit 0
+          
+          # 如果之前有 last_hash.txt，删掉它以保持整洁 (ignore错误以防文件不存在)
+          git rm last_hash.txt --ignore-unmatch
+          
+          # 添加新的课程记录文件
+          git add known_courses.txt
+          
+          # 只有当有变化时才提交
+          git commit -m "Update known courses [skip ci]" || exit 0
           git push
