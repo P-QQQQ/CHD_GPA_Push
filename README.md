@@ -29,7 +29,7 @@
 | `USERNAME` | ✅ | 教务系统/信息门户学号 |
 | `PASSWORD` | ✅ | 登录密码 |
 | `SC_KEY` | ✅ | Server酱 SendKey (用于微信推送，[获取地址](https://sct.ftqq.com/)) |
-| `TARGET_URL` | ❌ | (可选) 成绩单页面的具体 URL，若不填需修改代码中的默认值 |
+| `TARGET_URL` | ✅ | 成绩单页面的具体 URL |
 | `LOGIN_URL` | ❌ | (可选) 登录页面的 URL，默认为 CHD 统一认证登录页 |
 
 ### 3. 启用 Workflow
