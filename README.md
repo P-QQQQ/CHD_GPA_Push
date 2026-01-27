@@ -1,4 +1,4 @@
-# 🎓 CHD 成绩自动监控与推送 (CHD Grade Monitor)
+# 🎓 CHD 成绩自动监控与推送 (CHD GPA PUSH)
 
 基于 **GitHub Actions** 和 **Playwright** 的长安大学教务系统成绩监控脚本。
 
