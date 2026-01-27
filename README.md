@@ -10,7 +10,7 @@
 
 * **☁️ 云端运行**：利用 GitHub Actions 定时任务，无需本地挂机，完全免费。
 * **🚀 自动登录**：使用 Playwright 模拟浏览器行为，自动处理 CAS 统一身份认证。
-* **🔔 精准推送**：不再只是提示“有变化”，而是**直接告诉你哪门课出了成绩**，以及该课程的绩点和学分。
+* **🔔 精准推送**：不再只是提示“有变化”，而是**直接告诉你哪门课出了成绩**，以及该课程的绩点和学分；推送期中成绩、期末成绩、平时成绩 以及 总评/绩点，全方位掌握得分详情。
 * **📊 GPA 统计**：
     * **全GPA**：所有课程的平均绩点。
     * **核心GPA**：自动剔除“社会科学与公共责任”、“科学探索与技术创新”等选修类别后的绩点（可自定义）。
@@ -36,8 +36,9 @@
 1.  点击仓库上方的 **Actions** 标签。
 2.  如果不显示绿色按钮，点击左侧的 `CHD_GPA_MONITOR`。
 3.  你可以手动点击 **Run workflow** 进行第一次测试（初始化）。
-
----
+4.  点击仓库上方的 **Settings** 标签。
+5.  点击**Actions** 标签，并选择 **General**。
+6.  将**Workflow permissions**设置为 **Read and write permissions**
 
 ## ⚙️ 运行逻辑
 
@@ -56,7 +57,7 @@
 
 1.  安装依赖：
     ```bash
-    pip install playwright beautifulsoup4 requests
+    pip install playwright requests
     playwright install chromium
     ```
 2.  设置环境变量（推荐使用 `.env` 或直接在终端 export）：

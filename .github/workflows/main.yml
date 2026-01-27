@@ -2,8 +2,8 @@ name: CHD_GPA_MONITOR
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  
-  workflow_dispatch:
+    - cron: '*/30 * * * *'  # 每30分钟检查一次
+  workflow_dispatch:        # 支持手动触发
 
 jobs:
   monitor_job:
@@ -13,17 +13,19 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # 升级到 v4 更稳定
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+          cache: 'pip' # 自动缓存 pip 依赖
 
-      - name: Install Runtime Env
+      - name: Install Dependencies
         run: |
-          pip install playwright beautifulsoup4 requests
-          playwright install chromium
+          pip install playwright requests
+          # 仅安装 chromium，减少安装包体积和时间
+          playwright install chromium --with-deps
 
       - name: Run GPA Script
         env:
@@ -36,11 +38,16 @@ jobs:
 
       - name: Sync Hash State
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
   
-          git add course_hashes.txt
-          
-          # 提交更改
-          git commit -m "Update course hashes [skip ci]" || exit 0
-          git push
+          # 检查文件是否有变化，避免无意义的提交报错
+          if [ -f course_hashes.txt ]; then
+            git add course_hashes.txt
+            if git diff --staged --quiet; then
+              echo "No changes in course hashes."
+            else
+              git commit -m "Update course hashes [skip ci]"
+              git push
+            fi
+          fi
